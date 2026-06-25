@@ -1,1 +1,0 @@
-avascript:(function(){ const links=document.querySelectorAll("a"); let matches=[]; links.forEach(link=>{ const href=link.href||link.getAttribute("href"); if(href&&href.includes("id=")){matches.push(href);} }); if(matches.length>0){ alert("Links containing 'id=':\n\n"+matches.join("\n")); }else{ alert("No links containing 'id=' found."); } })();
