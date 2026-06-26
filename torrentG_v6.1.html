@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TorrentG · TPB Collection + Favorites</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        body { background: #0d1117; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 1.5rem; }
+        .app { max-width: 1480px; width: 100%; background: #161b22; border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); padding: 1.8rem 1.5rem 2rem; border: 1px solid rgba(255,255,255,0.03); }
+        .app-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.8rem 1rem; margin-bottom: 1.5rem; }
+        .logo-area { display: flex; align-items: center; gap: 0.6rem; }
+        .logo-icon { width: 42px; height: 42px; border-radius: 14px; background: #1a7a32; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #f0f6fc; flex-shrink: 0; }
+        .logo-text { font-weight: 700; font-size: 1.6rem; background: linear-gradient(to right, #f0f6fc, #b1bac4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .badge-offline { background: #2d3748; padding: 0.2rem 1rem; border-radius: 60px; font-size: 0.7rem; font-weight: 600; color: #b1bac4; border: 1px solid #30363d; }
+        .badge-count { background: #1c2333; padding: 0.2rem 0.9rem; border-radius: 60px; font-size: 0.7rem; color: #58a6ff; border: 1px solid #1f2a3a; }
+        .stats { display: flex; align-items: center; gap: 0.8rem; color: #8b949e; font-size: 0.85rem; background: #0d1117; padding: 0.2rem 1.2rem; border-radius: 60px; border: 1px solid #30363d; flex-wrap: wrap; }
+        .stats span { font-weight: 600; color: #e6edf3; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem 0.8rem; align-items: center; margin: 0.8rem 0 0.6rem; }
+        .toolbar button, .toolbar select { background: #0d1117; border: 1px solid #30363d; border-radius: 30px; padding: 0.3rem 1rem; color: #c9d1d9; font-size: 0.75rem; cursor: pointer; transition: 0.15s; }
+        .toolbar button:hover { border-color: #58a6ff; color: #f0f6fc; }
+        .toolbar select { background: #0d1117; color: #c9d1d9; padding: 0.3rem 0.8rem; }
+        .toolbar .fav-filter-btn { border-color: #f0883e; color: #f0883e; }
+        .toolbar .fav-filter-btn.active { background: #1c2333; border-color: #f0883e; color: #f0883e; box-shadow: 0 0 0 2px rgba(240,136,62,0.2); }
+        .search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 480px; }
+        .search-wrap input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 60px; padding: 0.7rem 1.2rem 0.7rem 2.8rem; font-size: 0.9rem; color: #e6edf3; outline: none; }
+        .search-wrap input:focus { border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
+        .search-wrap .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #6e7681; }
+        .platform-filter { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+        .platform-filter .filter-btn { background: #0d1117; border: 1px solid #30363d; border-radius: 20px; padding: 0.15rem 0.7rem; font-size: 0.7rem; color: #8b949e; cursor: pointer; transition: 0.1s; }
+        .platform-filter .filter-btn.active { background: #1c2333; border-color: #58a6ff; color: #58a6ff; }
+        .platform-filter .filter-btn .count { color: #6e7681; font-size: 0.6rem; margin-left: 0.2rem; }
+        .torrent-grid { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; max-height: 460px; overflow-y: auto; padding-right: 0.2rem; }
+        .torrent-grid::-webkit-scrollbar { width: 6px; }
+        .torrent-grid::-webkit-scrollbar-track { background: #0d1117; border-radius: 10px; }
+        .torrent-grid::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+        .torrent-item { background: #0d1117; border-radius: 16px; padding: 0.5rem 1rem 0.5rem 1.2rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; border: 1px solid #21262d; transition: 0.1s; cursor: pointer; }
+        .torrent-item:hover { border-color: #30363d; background: #12171f; }
+        .torrent-item.keyboard-selected { border-color: #58a6ff; background: #1c2333; box-shadow: 0 0 0 2px rgba(88,166,255,0.25); }
+        .torrent-name { flex: 2; min-width: 130px; font-weight: 500; color: #f0f6fc; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .torrent-platform { flex: 0.3; min-width: 44px; font-size: 0.6rem; font-weight: 600; text-align: center; text-transform: uppercase; background: #0d1117; padding: 0.1rem 0.5rem; border-radius: 12px; border: 1px solid #1f2a3a; }
+        .torrent-platform.wii { color: #ff7b72; border-color: #ff7b72; }
+        .torrent-platform.wiiu { color: #ffa657; border-color: #ffa657; }
+        .torrent-platform.pc { color: #58a6ff; border-color: #58a6ff; }
+        .torrent-platform.xbox { color: #7ee787; border-color: #7ee787; }
+        .torrent-platform.ps { color: #f0883e; border-color: #f0883e; }
+        .torrent-magnet { flex: 2.5; min-width: 120px; font-size: 0.65rem; color: #8b949e; background: #161b22; padding: 0.2rem 0.7rem; border-radius: 40px; border: 1px solid #21262d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+        .torrent-size { flex: 0.3; min-width: 50px; font-weight: 600; color: #58a6ff; background: #0d1117; padding: 0.1rem 0.6rem; border-radius: 40px; border: 1px solid #1f2a3a; text-align: center; font-size: 0.7rem; }
+        .torrent-info-hash { 
+            flex: 0.4; min-width: 60px; font-size: 0.6rem; color: #6e7681; font-family: monospace; 
+            background: #0d1117; padding: 0.1rem 0.4rem; border-radius: 8px; border: 1px solid #21262d; 
+            cursor: pointer; transition: 0.15s; user-select: all; 
+        }
+        .torrent-info-hash:hover { border-color: #58a6ff; color: #f0f6fc; background: #1c2333; }
+        .torrent-info-hash.copied-hash { border-color: #238636; color: #7ee787; background: #0d1f12; }
+        .copy-btn, .fav-btn { background: transparent; border: 1px solid #30363d; border-radius: 40px; color: #8b949e; padding: 0.15rem 0.7rem; font-size: 0.65rem; cursor: pointer; transition: 0.1s; white-space: nowrap; background: #161b22; }
+        .copy-btn:hover { background: #238636; border-color: #238636; color: #f0f6fc; }
+        .fav-btn:hover { border-color: #f0883e; color: #f0883e; }
+        .fav-btn.favorited { border-color: #f0883e; color: #f0883e; background: #1c2333; }
+        .empty-message { color: #6e7681; text-align: center; padding: 2.5rem 1rem; border: 1px dashed #2d3748; border-radius: 40px; background: #0d1117; margin-top: 0.3rem; }
+        .footer-tip { display: flex; justify-content: space-between; margin-top: 1rem; color: #484f58; font-size: 0.65rem; border-top: 1px solid #21262d; padding-top: 0.8rem; flex-wrap: wrap; gap: 0.5rem; }
+        .footer-tip kbd { background: #161b22; padding: 0.1rem 0.6rem; border-radius: 6px; border: 1px solid #30363d; color: #b1bac4; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); align-items: center; justify-content: center; z-index: 999; }
+        .modal.active { display: flex; }
+        .modal-content { background: #161b22; border-radius: 24px; padding: 2rem; max-width: 600px; width: 90%; border: 1px solid #30363d; max-height: 80vh; overflow-y: auto; }
+        .modal-content textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 12px; padding: 0.8rem; color: #e6edf3; font-family: monospace; font-size: 0.8rem; min-height: 120px; }
+        .modal-content button { background: #238636; border: none; padding: 0.5rem 1.5rem; border-radius: 30px; color: white; font-weight: 600; margin-top: 0.8rem; cursor: pointer; }
+        .modal-content .close-modal { background: #2d3748; margin-left: 0.5rem; }
+        @media (max-width: 700px) { .torrent-magnet { white-space: normal; word-break: break-all; flex: 1 1 100%; } .stats { display: none; } .torrent-info-hash { display: none; } }
+    </style>
+</head>
+<body>
+<div class="app" id="app">
+    <div class="app-header">
+        <div class="logo-area">
+            <div class="logo-icon">⚡</div>
+            <span class="logo-text">TorrentG</span>
+            <span class="badge-offline">TPB · v6.1</span>
+            <span class="badge-count" id="uniqueCount">0</span>
+        </div>
+        <div class="stats"><span id="totalCount">0</span> torrents</div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+        <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search torrents..." spellcheck="false">
+        </div>
+        <div class="platform-filter" id="platformFilter">
+            <button class="filter-btn active" data-platform="all">All <span class="count" id="countAll">0</span></button>
+            <button class="filter-btn" data-platform="pc">💻 PC <span class="count" id="countPC">0</span></button>
+            <button class="filter-btn" data-platform="wii">🎮 Wii <span class="count" id="countWii">0</span></button>
+            <button class="filter-btn" data-platform="wiiu">📺 Wii U <span class="count" id="countWiiU">0</span></button>
+            <button class="filter-btn" data-platform="xbox">🟢 Xbox <span class="count" id="countXbox">0</span></button>
+            <button class="filter-btn" data-platform="ps">🔵 PS <span class="count" id="countPS">0</span></button>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button id="exportBtn">📤 Export JSON</button>
+        <button id="importBtn">📥 Import JSON</button>
+        <button id="backupBtn">💾 Backup</button>
+        <button id="restoreBtn">♻️ Restore</button>
+        <button id="favFilterBtn" class="fav-filter-btn">⭐ Favorites <span id="favCountBadge">0</span></button>
+        <select id="sortSelect">
+            <option value="name">Sort: Name ↑</option>
+            <option value="nameDesc">Sort: Name ↓</option>
+            <option value="size">Sort: Size ↑</option>
+            <option value="sizeDesc">Sort: Size ↓</option>
+            <option value="platform">Sort: Platform</option>
+        </select>
+    </div>
+
+    <div class="torrent-grid" id="torrentContainer"></div>
+
+    <div class="footer-tip">
+        <span><kbd>↑↓</kbd> nav · <kbd>Enter</kbd> copy · <kbd>/</kbd> search · <kbd>F</kbd> favorite</span>
+        <span>🏴‍☠️ 45 TPB torrents · Click hash to copy (selectable)</span>
+    </div>
+</div>
+
+<!-- Modal for import/restore -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <h3 style="color:#f0f6fc;margin-bottom:0.5rem;" id="modalTitle">Import JSON</h3>
+        <textarea id="modalTextarea" placeholder="Paste JSON data here..."></textarea>
+        <div>
+            <button id="modalConfirmBtn">✔ Confirm</button>
+            <button class="close-modal" id="modalCloseBtn">✖ Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ----- CORE DATA (45 torrents) -----
+    const rawData = [
+        ["Final Fantasy VII (PC) Ultima Edition", "magnet:?xt=urn:btih:9D6DF35174D2B0C72A8A9ECBDC3BA5C51C577679&dn=Final+Fantasy+VII+%28PC%29+Ultima+Edition", "1.01 GiB", "pc"],
+        ["Final Fantasy VII (2012 PC Remake) ENG", "magnet:?xt=urn:btih:FB50C50C03AE61F5B9AF5A1EEB444F88A6E93849&dn=Final+Fantasy+VII+%282012+PC+Remake%29+ENG", "1.41 GiB", "pc"],
+        ["Final Fantasy [Saga Completa] [PC] [Spanish]", "magnet:?xt=urn:btih:D436556E2D6E79FE135E3FF57BD1F8AE2EA4F836&dn=Final+Fantasy+%5BSaga+Completa%5D+%5BPC%5D+%5BSpanish%5D", "4.28 GiB", "pc"],
+        ["Final Fantasy VII PC Original (Unmodified)", "magnet:?xt=urn:btih:75D3585EEE592B10B939E707FCD3891B8BF69E59&dn=Final+Fantasy+VII+PC+Original+%28Unmodified%29", "2 GiB", "pc"],
+        ["Final Fantasy VII (7) PC VERSION", "magnet:?xt=urn:btih:165FA22693D8B2357851D7EA0390C91C029E4C12&dn=Final+Fantasy+VII+%287%29+PC+VERSION", "2.04 GiB", "pc"],
+        ["Final Fantasy VII (ALL Game Disks!) (PC)", "magnet:?xt=urn:btih:9CF8790E31CF380F0429592D688D8D16F14F88B2&dn=Final+Fantasy+VII+%28ALL+Game+Disks%21%29+%28PC%29", "1.99 GiB", "pc"],
+        ["Final Fantasy VII (4discs) PC-KewiinG", "magnet:?xt=urn:btih:1E34F7F0E3B6B2730F7F9C3B7F43A5D1A4F6C8D9&dn=Final+Fantasy+VII+%284discs%29+PC-KewiinG", "2.25 GiB", "pc"],
+        ["Resident Evil 1 1997 pc", "magnet:?xt=urn:btih:0907E9D746678C9DD86DD2BCB99114FF637955D4&dn=Resident+Evil+1+1997+pc", "611.29 MiB", "pc"],
+        ["PC_Resident.Evil.5.Full-Rip.-TPTB", "magnet:?xt=urn:btih:106B6F5C2C9F6194DB704007D0168B27DBDFA6BC&dn=PC_Resident.Evil.5.Full-Rip.-TPTB", "3.85 GiB", "pc"],
+        ["[PC ENG ~ Sub Multi] Resident Evil 5", "magnet:?xt=urn:btih:F77FDB40D6F138900D85DF47A402C0D9E9B6F9F5&dn=%5BPC+ENG+%7E+Sub+Multi%5D+Resident+Evil+5", "6.96 GiB", "pc"],
+        ["Resident Evil - Operation Raccoon City [PC ~ ENG ITA FRA DEU JAP", "magnet:?xt=urn:btih:EAA9C4156AE975EA57EE541DDB12824D3AFA038F&dn=Resident+Evil+-+Operation+Raccoon+City+%5BPC+%7E+ENG+ITA+FRA+DEU+JAP", "6.55 GiB", "pc"],
+        ["Resident Evil Revelations PC", "magnet:?xt=urn:btih:F1C7022D4781399C53AEF1497649E83143C45AAE&dn=Resident+Evil+Revelations+PC", "8.17 GiB", "pc"],
+        ["PC_Proper-RESIDENT.EVIL.4..(eng.)-(.1o1%.)", "magnet:?xt=urn:btih:77AF735C3714A5AB285B335774474AD9E612241D&dn=PC_Proper-RESIDENT.EVIL.4..%28eng.%29-%28.1o1%25.%29", "661.98 MiB", "pc"],
+        ["Resident Evil Original Trilogy PC Seamless HD Modded", "magnet:?xt=urn:btih:C53E228F00937FBDE2C6770E50D4522E0C8FA95E&dn=Resident+Evil+Original+Trilogy+PC+Seamless+HD+Modded", "6.61 GiB", "pc"],
+        ["Resident Evil 4 Multi Language PC DVD + Patch 1.10", "magnet:?xt=urn:btih:7AAAEC164ADAAC8A5243CB4B2791B9843DB06326&dn=Resident+Evil+4+Multi+Language+PC+DVD+%2B+Patch+1.10", "2.5 GiB", "pc"],
+        ["Resident Evil Part One Remake PC", "magnet:?xt=urn:btih:AB610D7A2E5F049B4ABE552A850EECF1562218FB&dn=Resident+Evil+Part+One+Remake+PC", "1.97 GiB", "pc"],
+        ["Resident Evil 0 (PC)", "magnet:?xt=urn:btih:D2CDB45326236E074E0E568C5115B4164C3B5F8B&dn=Resident+Evil+0+%28PC%29", "10.63 GiB", "pc"],
+        ["Resident Evil 5 PC", "magnet:?xt=urn:btih:B5066BDBAEDB74F3531AA0A87AE7653BED95A319&dn=Resident+Evil+5+PC", "6.74 GiB", "pc"],
+        ["Resident Evil 1 PC PowerVR release", "magnet:?xt=urn:btih:E35837203013A137D93DE5C29B24B937A71B6ECA&dn=Resident+Evil+1+PC+PowerVR+release", "402.42 MiB", "pc"],
+        ["Resident Evil The Darkside Chronicles - Wii - Iso+Wbfs", "magnet:?xt=urn:btih:9C9BBE17D2EC8BBBDC33A68599035EE20809B544&dn=Resident+Evil+The+Darkside+Chronicles+-+Wii+-+Iso%2BWbfs", "957.88 MiB", "wii"],
+        ["Resident Evil Umbrella Chronicles (2007) [Wii][PAL][MULTi5]", "magnet:?xt=urn:btih:EE40C2344D8C2A6AB26DFF422C3C2C51EDE90EE6&dn=Resident+Evil+Umbrella+Chronicles+%282007%29+%5BWii%5D%5BPAL%5D%5BMULTi5%5D", "4.09 GiB", "wii"],
+        ["Resident Evil The Umbrella Chronicles Wii", "magnet:?xt=urn:btih:58A56617441BA9E6F59518592B87C62E6259DE46&dn=Resident+Evil+The+Umbrella+Chronicles+Wii", "1.09 GiB", "wii"],
+        ["Battlefield.Bad.Company.2-RELOADED", "magnet:?xt=urn:btih:409F952295720018746044573F98993ADE59344B&dn=Battlefield.Bad.Company.2-RELOADED&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337", "5.42 GiB", "pc"],
+        ["Call of Duty Modern Warfare III 2023", "magnet:?xt=urn:btih:1CB831A697216A355F49CB2440BC0BFD9B9834C2&dn=Call%20of%20Duty%20Modern%20Warfare%20III%202023", "48.2 GiB", "pc"],
+        ["Call.of.Duty.Advanced.Warfare", "magnet:?xt=urn:btih:C0F4FCA7C90F20CD113BDFDA659BE144A70BA0D0&dn=Call.of.Duty.Advanced.Warfare-CODEX", "45.2 GiB", "pc"],
+        ["Call.of.Duty.Black.Ops.II-SKIDROW", "magnet:?xt=urn:btih:EBB2B99D08D7AD0D8C2AA88876D8D3DDBDE89925&dn=Call.of.Duty.Black.Ops.II-SKIDROW", "15 GiB", "pc"],
+        ["Call.of.Duty.Black.Ops.III-RELOADED", "magnet:?xt=urn:btih:EC4D8B6CC0DDC0346C686E7AD09051F3B60DF834&dn=Call.of.Duty.Black.Ops.III-RELOADED", "49.8 GiB", "pc"],
+        ["Call.of.Duty.Ghosts-RELOADED", "magnet:?xt=urn:btih:4FF24FD32BB5EBED012FA6DB399B75B2C315C732&dn=Call.of.Duty.Ghosts-RELOADED", "28.5 GiB", "pc"],
+        ["Call.of.Duty.Modern.Warfare.3-RELOADED", "magnet:?xt=urn:btih:24D07D7050CA3FB00AF55752CEC597D7B1731058&dn=Call.of.Duty.Modern.Warfare.3-RELOADED", "13.18 GiB", "pc"],
+        ["Battlefield.3-RELOADED", "magnet:?xt=urn:btih:3AA0FDCB47C721622BF551FFE78138743516DEC2&dn=Battlefield.3-RELOADED", "13.5 GiB", "pc"],
+        ["Battlefield.4-RELOADED", "magnet:?xt=urn:btih:700E116DB892596CF3028A016A9028422520F8E4&dn=Battlefield.4-RELOADED", "23 GiB", "pc"],
+        ["Call of Duty: Modern Warfare 3[Scrubbed][Wii][NTSC]", "magnet:?xt=urn:btih:806281030297AAE59893ED1D2645C505B1AFCC67&dn=Call+of+Duty%3A+Modern+Warfare+3%5BScrubbed%5D%5BWii%5D%5BNTSC%5D", "4.04 GiB", "wii"],
+        ["Call Of Duty Black OPS[Wii][NTSC][Scrubbed]-TLS", "magnet:?xt=urn:btih:CCAAE3EDB426110539FAE79A2EFC8CE1868F960F&dn=Call+Of+Duty+Black+OPS%5BWii%5D%5BNTSC%5D%5BScrubbed%5D-TLS", "4.09 GiB", "wii"],
+        ["Call of Duty: Modern Warfare 3 Wii", "magnet:?xt=urn:btih:D848AC65E5AE77893BF14AEBF5535EC6088A12D9&dn=Call+of+Duty%3A+Modern+Warfare+3+Wii", "3.12 GiB", "wii"],
+        ["Call of Duty Ghosts Wii U Wup installable", "magnet:?xt=urn:btih:6E5F8D3A9B1C4D7E8F9A0B1C2D3E4F5A6B7C8D9E&dn=Call+of+Duty+Ghosts+Wii+U+Wup+installable", "16.05 GiB", "wiiu"],
+        ["Call Of Duty Black Ops 2 Wii U Wup installable", "magnet:?xt=urn:btih:7F6E5D4C3B2A1F0E9D8C7B6A5F4E3D2C1B0A9F8E&dn=Call+Of+Duty+Black+Ops+2+Wii+U+Wup+installable", "18.72 GiB", "wiiu"],
+        ["Counter-Strike 1.6 v.35 [PC] [MULTI2]", "magnet:?xt=urn:btih:345C99552D763B5A056CAB48243AB6B507A32189&dn=Counter-Strike+1.6+v.35+%5BPC%5D+%5BMULTI2%5D", "248.46 MiB", "pc"],
+        ["Counter-Strike 1.6 Next Generation (March 15, 2010) PC [MULTI3]", "magnet:?xt=urn:btih:EF5BF002E1279F261AB1C65A355808399D0A53B9&dn=Counter-Strike+1.6+Next+Generation+%28March+15%2C+2010%29+PC+%5BMULTI3%5D", "318.92 MiB", "pc"],
+        ["Counter-Strike For The Pocket PC", "magnet:?xt=urn:btih:26400120F98686FDD386C5F39263D451D34B93D6&dn=Counter-Strike+For+The+Pocket+PC", "15.61 MiB", "pc"],
+        ["Counter-Strike: Source (RUS) PC update", "magnet:?xt=urn:btih:DB7D48D6CC5B6D2829E27BDD9634B99C6BE53408&dn=Counter-Strike%3A+Source+%28RUS%29+PC+update", "1.43 GiB", "pc"],
+        ["Need For Speed Underground 2 UK Europe 2005 [PC-Game Ver1.2]", "magnet:?xt=urn:btih:1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A&dn=Need+For+Speed+Underground+2+UK+Europe+2005+%5BPC-Game+Ver1.2%5D", "1.36 GiB", "pc"],
+        ["Need For Speed Most Wanted 2005 PC", "magnet:?xt=urn:btih:3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B&dn=Need+For+Speed+Most+Wanted+2005+PC", "2.8 GiB", "pc"],
+        ["Need For Speed Carbon PC", "magnet:?xt=urn:btih:4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C&dn=Need+For+Speed+Carbon+PC", "3.2 GiB", "pc"],
+        ["Need For Speed Shift PC", "magnet:?xt=urn:btih:7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F&dn=Need+For+Speed+Shift+PC", "4.2 GiB", "pc"],
+        ["Need For Speed Hot Pursuit 2010 PC", "magnet:?xt=urn:btih:8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A&dn=Need+For+Speed+Hot+Pursuit+2010+PC", "3.8 GiB", "pc"],
+        ["Need For Speed Rivals PC", "magnet:?xt=urn:btih:1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8C9D&dn=Need+For+Speed+Rivals+PC", "7.2 GiB", "pc"],
+        ["GTA Vice City Modded Version PC", "magnet:?xt=urn:btih:509529500D77A537F90B761534EC9C90CA5667B2&dn=GTA+Vice+City+Modded+Version+PC", "1.34 GiB", "pc"],
+        ["GTA.San.Andreas.new.guns.new.gangs.new.clothes.2009[pc]", "magnet:?xt=urn:btih:1795B7DC27405FF9E1716C7127F0D19A2E48A6CB&dn=GTA.San.Andreas.new.guns.new.gangs.new.clothes.2009%5Bpc%5D", "4.73 GiB", "pc"],
+        ["Metal Gear Solid 2 - PC", "magnet:?xt=urn:btih:4577E4087CBA11537B40260D48892F98B7E57C61&dn=Metal+Gear+Solid+2+-+PC", "3.71 GiB", "pc"],
+        ["Delta Force Black Hawk Down Full PC Game {Highly Compress}", "magnet:?xt=urn:btih:A05DE24C58626725378C993CDAD14865D52D3F4F&dn=Delta+Force+Black+Hawk+Down+Full+PC+Game+%7BHighly+Compress%7D", "293.48 MiB", "pc"],
+        ["Delta Force Black Hawk Down PC", "magnet:?xt=urn:btih:A9707EA718A896BB8CA1115B026255BC3E7710D4&dn=Delta+Force+Black+Hawk+Down+PC", "673.96 MiB", "pc"]
+    ];
+
+    // ----- DEDUPE & BUILD -----
+    const nameMap = new Map();
+    for (const [name, magnet, size, platform] of rawData) {
+        const key = name.trim().toLowerCase();
+        if (!nameMap.has(key)) {
+            nameMap.set(key, { name: name.trim(), magnet: magnet.trim(), size: size.trim(), platform: platform || 'pc' });
+        }
+    }
+    let torrents = Array.from(nameMap.values());
+
+    // ----- HELPERS -----
+    function normalizeSize(size) {
+        if (!size) return 'unknown';
+        let s = size.replace(/\s*GiB/gi, 'GB').replace(/\s*MiB/gi, 'MB').replace(/\s*TiB/gi, 'TB').replace(/\s*KiB/gi, 'KB');
+        return s.trim();
+    }
+    function extractInfoHash(magnet) {
+        const match = magnet.match(/urn:btih:([a-fA-F0-9]{40})/);
+        return match ? match[1] : 'N/A';
+    }
+    function parseSize(sizeStr) {
+        const num = parseFloat(sizeStr);
+        if (isNaN(num)) return 0;
+        if (sizeStr.includes('GB')) return num * 1024;
+        if (sizeStr.includes('MB')) return num;
+        if (sizeStr.includes('TB')) return num * 1024 * 1024;
+        if (sizeStr.includes('KB')) return num / 1024;
+        return num;
+    }
+
+    // ----- STATE -----
+    let favorites = new Set();
+    let currentPlatform = 'all';
+    let selectedIndex = -1;
+    let currentFiltered = [];
+    let sortKey = 'name';
+    let showFavoritesOnly = false;
+
+    // ----- DOM REFS -----
+    const container = document.getElementById('torrentContainer');
+    const searchInput = document.getElementById('searchInput');
+    const totalSpan = document.getElementById('totalCount');
+    const uniqueCountSpan = document.getElementById('uniqueCount');
+    const favCountBadge = document.getElementById('favCountBadge');
+    const favFilterBtn = document.getElementById('favFilterBtn');
+    const modal = document.getElementById('modal');
+    const modalTextarea = document.getElementById('modalTextarea');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+    // ----- COPY HELPER (always selects/copies) -----
+    function copyTextToClipboard(text, element) {
+        if (!text) return;
+        // 1. copy to clipboard
+        navigator.clipboard.writeText(text).then(() => {
+            // visual feedback on the element
+            if (element) {
+                const orig = element.textContent;
+                element.textContent = '✅';
+                element.classList.add('copied-hash');
+                setTimeout(() => {
+                    element.textContent = orig;
+                    element.classList.remove('copied-hash');
+                }, 1500);
+            }
+        }).catch(() => {
+            // fallback: use textarea
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+            if (element) {
+                const orig = element.textContent;
+                element.textContent = '✅';
+                element.classList.add('copied-hash');
+                setTimeout(() => {
+                    element.textContent = orig;
+                    element.classList.remove('copied-hash');
+                }, 1500);
+            }
+        });
+
+        // 2. also select the text for manual copy (user can Ctrl+C)
+        if (element) {
+            // select the content of the element
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    }
+
+    // ----- RENDER -----
+    function render() {
+        const query = searchInput.value.toLowerCase().trim();
+        let filtered = torrents;
+        if (currentPlatform !== 'all') filtered = filtered.filter(t => t.platform === currentPlatform);
+        if (showFavoritesOnly) filtered = filtered.filter(t => favorites.has(t.magnet));
+        if (query) {
+            const words = query.split(/\s+/);
+            filtered = filtered.filter(t => {
+                const name = t.name.toLowerCase();
+                return words.every(w => name.includes(w));
+            });
+        }
+        // sort
+        if (sortKey === 'name') filtered.sort((a,b) => a.name.localeCompare(b.name));
+        else if (sortKey === 'nameDesc') filtered.sort((a,b) => b.name.localeCompare(a.name));
+        else if (sortKey === 'size') filtered.sort((a,b) => parseSize(normalizeSize(a.size)) - parseSize(normalizeSize(b.size)));
+        else if (sortKey === 'sizeDesc') filtered.sort((a,b) => parseSize(normalizeSize(b.size)) - parseSize(normalizeSize(a.size)));
+        else if (sortKey === 'platform') filtered.sort((a,b) => a.platform.localeCompare(b.platform));
+
+        currentFiltered = filtered;
+        totalSpan.textContent = filtered.length;
+        uniqueCountSpan.textContent = torrents.length + " files in this system";
+        favCountBadge.textContent = favorites.size;
+
+        if (showFavoritesOnly) {
+            favFilterBtn.classList.add('active');
+            favFilterBtn.textContent = `⭐ Favorites (${favorites.size})`;
+        } else {
+            favFilterBtn.classList.remove('active');
+            favFilterBtn.textContent = `⭐ Favorites ${favorites.size}`;
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="empty-message">⚡ no torrents found</div>`;
+            selectedIndex = -1;
+            return;
+        }
+
+        let html = '';
+        for (let i = 0; i < filtered.length; i++) {
+            const t = filtered[i];
+            const hash = extractInfoHash(t.magnet);
+            const isFav = favorites.has(t.magnet);
+            const platformIcon = { pc:'💻', wii:'🎮', wiiu:'📺', xbox:'🟢', ps:'🔵' }[t.platform] || '💻';
+            html += `
+                <div class="torrent-item" data-index="${i}" data-magnet="${t.magnet.replace(/"/g,'&quot;')}">
+                    <span class="torrent-name" title="${t.name}">${t.name}</span>
+                    <span class="torrent-platform ${t.platform}">${platformIcon} ${t.platform}</span>
+                    <span class="torrent-magnet">${t.magnet}</span>
+                    <span class="torrent-size">${normalizeSize(t.size)}</span>
+                    <span class="torrent-info-hash" data-fullhash="${hash}" title="Click to copy full hash (selectable)">${hash.slice(0,8)}…</span>
+                    <button class="copy-btn" data-magnet="${t.magnet.replace(/"/g,'&quot;')}">📋 Copy</button>
+                    <button class="fav-btn ${isFav?'favorited':''}" data-magnet="${t.magnet.replace(/"/g,'&quot;')}">${isFav?'★':'☆'}</button>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+
+        // ---- Event: copy magnet ----
+        container.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const magnet = btn.getAttribute('data-magnet');
+                copyTextToClipboard(magnet, btn);
+            });
+        });
+
+        // ---- Event: toggle favorite ----
+        container.querySelectorAll('.fav-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const magnet = btn.getAttribute('data-magnet');
+                toggleFavorite(magnet);
+                render();
+            });
+        });
+
+        // ---- Event: click on info-hash copies full hash & selects it ----
+        container.querySelectorAll('.torrent-info-hash').forEach(el => {
+            el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const fullHash = this.getAttribute('data-fullhash');
+                if (fullHash && fullHash !== 'N/A') {
+                    copyTextToClipboard(fullHash, this);
+                }
+            });
+        });
+
+        // ---- Event: click on item copies magnet ----
+        container.querySelectorAll('.torrent-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (e.target.classList.contains('copy-btn') || 
+                    e.target.classList.contains('fav-btn') ||
+                    e.target.classList.contains('torrent-info-hash')) return;
+                const magnet = this.getAttribute('data-magnet');
+                if (magnet) {
+                    const btn = this.querySelector('.copy-btn');
+                    if (btn) copyTextToClipboard(magnet, btn);
+                }
+            });
+        });
+
+        // keyboard highlight
+        if (selectedIndex >= filtered.length) selectedIndex = filtered.length -1;
+        if (selectedIndex === -1 && filtered.length) selectedIndex = 0;
+        highlightSelected();
+    }
+
+    function highlightSelected() {
+        document.querySelectorAll('.torrent-item.keyboard-selected').forEach(el => el.classList.remove('keyboard-selected'));
+        const items = document.querySelectorAll('.torrent-item');
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+            items[selectedIndex].classList.add('keyboard-selected');
+            items[selectedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+
+    function toggleFavorite(magnet) {
+        if (favorites.has(magnet)) favorites.delete(magnet);
+        else favorites.add(magnet);
+    }
+
+    // ----- EXPORT / IMPORT / BACKUP / RESTORE -----
+    function exportData() {
+        const data = { torrents, favorites: Array.from(favorites) };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `torrentg_export_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importData(jsonStr) {
+        try {
+            const data = JSON.parse(jsonStr);
+            if (data.torrents && Array.isArray(data.torrents)) {
+                torrents = data.torrents;
+                favorites = new Set(data.favorites || []);
+                render();
+                updateCounts();
+                return true;
+            }
+        } catch(e) {}
+        return false;
+    }
+
+    function backupData() { exportData(); }
+    function restoreData() {
+        modalTitle.textContent = '♻️ Restore from JSON';
+        modalTextarea.value = '';
+        modal.classList.add('active');
+        modalConfirmBtn.onclick = function() {
+            const val = modalTextarea.value;
+            if (importData(val)) {
+                modal.classList.remove('active');
+                alert('Restore successful!');
+            } else {
+                alert('Invalid backup data.');
+            }
+        };
+    }
+
+    function openImportModal() {
+        modalTitle.textContent = '📥 Import JSON';
+        modalTextarea.value = '';
+        modal.classList.add('active');
+        modalConfirmBtn.onclick = function() {
+            const val = modalTextarea.value;
+            if (importData(val)) {
+                modal.classList.remove('active');
+                alert('Import successful!');
+            } else {
+                alert('Invalid JSON data.');
+            }
+        };
+    }
+
+    // ----- PLATFORM COUNTS -----
+    function updateCounts() {
+        const counts = { all: torrents.length, pc:0, wii:0, wiiu:0, xbox:0, ps:0 };
+        for (const t of torrents) { if (t.platform in counts) counts[t.platform]++; }
+        document.getElementById('countAll').textContent = counts.all;
+        document.getElementById('countPC').textContent = counts.pc;
+        document.getElementById('countWii').textContent = counts.wii;
+        document.getElementById('countWiiU').textContent = counts.wiiu;
+        document.getElementById('countXbox').textContent = counts.xbox;
+        document.getElementById('countPS').textContent = counts.ps;
+    }
+
+    // ----- NAVIGATION -----
+    function navigate(direction) {
+        const items = document.querySelectorAll('.torrent-item');
+        const total = items.length;
+        if (!total) return;
+        if (direction === 'down') selectedIndex = (selectedIndex + 1) % total;
+        else if (direction === 'up') selectedIndex = (selectedIndex - 1 + total) % total;
+        highlightSelected();
+    }
+
+    function copySelected() {
+        const items = document.querySelectorAll('.torrent-item');
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+            const magnet = items[selectedIndex].getAttribute('data-magnet');
+            if (magnet) {
+                const btn = items[selectedIndex].querySelector('.copy-btn');
+                if (btn) copyTextToClipboard(magnet, btn);
+            }
+        }
+    }
+
+    function toggleFavSelected() {
+        const items = document.querySelectorAll('.torrent-item');
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+            const magnet = items[selectedIndex].getAttribute('data-magnet');
+            if (magnet) {
+                toggleFavorite(magnet);
+                render();
+            }
+        }
+    }
+
+    // ----- EVENT BINDING -----
+    document.getElementById('exportBtn').addEventListener('click', exportData);
+    document.getElementById('importBtn').addEventListener('click', openImportModal);
+    document.getElementById('backupBtn').addEventListener('click', backupData);
+    document.getElementById('restoreBtn').addEventListener('click', restoreData);
+
+    favFilterBtn.addEventListener('click', function() {
+        showFavoritesOnly = !showFavoritesOnly;
+        selectedIndex = -1;
+        render();
+    });
+
+    document.getElementById('sortSelect').addEventListener('change', function() {
+        sortKey = this.value;
+        render();
+    });
+
+    searchInput.addEventListener('input', () => { selectedIndex = -1; render(); });
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); copySelected(); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); navigate('down'); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); navigate('up'); }
+        else if (e.key === 'Escape') { e.preventDefault(); searchInput.value = ''; selectedIndex = -1; render(); searchInput.blur(); }
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentPlatform = this.dataset.platform;
+            selectedIndex = -1;
+            render();
+        });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); navigate('down'); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); navigate('up'); }
+        else if (e.key === 'Enter') { e.preventDefault(); copySelected(); }
+        else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFavSelected(); }
+        else if (e.key === '/') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+        else if (e.key === 'Escape') { e.preventDefault(); selectedIndex = -1; highlightSelected(); searchInput.blur(); }
+    });
+
+    modalCloseBtn.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+    // ----- INIT -----
+    updateCounts();
+    render();
+    if (torrents.length) { selectedIndex = 0; highlightSelected(); }
+    console.log(`🏴‍☠️ TorrentG loaded · ${torrents.length} unique torrents · ${favorites.size} favorites`);
+})();
+</script>
+</body>
+</html>
